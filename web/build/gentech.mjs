@@ -24,5 +24,5 @@ const out = SLUGS.map(s => {
   if (!i) throw new Error('missing icon: ' + s)
   return { t: (i.title === 'Traefik Proxy' ? 'Traefik' : i.title), p: i.path }
 })
-writeFileSync('/home/agent/site/src/tech.js', `export const TECH=${JSON.stringify(out)};\n`)
+writeFileSync('/home/agent/site/web/public/tech.js', `export const TECH=${JSON.stringify(out)};\n`)
 console.log('chips', out.length)

@@ -18,7 +18,7 @@ for (let y = 0; y < H; y++) {
   }
   rows.push(row)
 }
-writeFileSync('/home/agent/site/src/map.js',
+writeFileSync('/home/agent/site/web/public/map.js',
   `export const MAP_W=${W},MAP_H=${H};\nexport const MAP=${JSON.stringify(rows)};\n`)
 const dots = rows.join('').split('').filter(c => c === '1').length
 console.log('grid', W + 'x' + H, 'land dots', dots)

@@ -3,18 +3,38 @@
 My site. One page, no framework — plain HTML, one stylesheet, and a handful of
 ES modules.
 
+Two processes:
+
+    api/   apis.eaksy.com/eaksy/   fetches github + roblox, caches, serves json
+    web/   eaksy.com               the page; asks api, knows nothing upstream
+
 ## How it works
 
-Nothing is fetched in the browser. A build step pulls the numbers once and
-writes `src/data.json`, which the page imports:
+A visitor's browser only ever talks to the host it loaded. It makes no request
+to github or roblox — not for data, and not for images.
 
-- `build/fetchdata.mjs` — GitHub contributions (per calendar year, plus the
-  rolling 12-month window GitHub shows by default) and Roblox visit counts.
-- `build/genmap.mjs` — samples Natural Earth land polygons into a lon/lat
-  bitmask, so the background map ships as a string instead of a mapping library.
-- `build/gentech.mjs` — bakes the stack icons into a module.
+`api` refreshes on boot and again nightly at 01:00 UTC, keeping the snapshot on
+disk. A restart reuses it; a container that was down at 01:00 notices the
+snapshot is over a day old and catches up immediately.
 
-That means no API keys in the client, no CORS, no rate limits, and no spinners.
+`web` asks `api` for that snapshot server-side and inlines it into the page, so
+the HTML arrives complete — no client fetch, no spinner. If `api` is
+unreachable, `web` keeps serving the last payload it saw rather than a blank
+page, and mirrors the thumbnails in memory for the same reason.
+
+Build-time asset generation lives in `web/build`:
+
+- `genmap.mjs` — samples Natural Earth land polygons into a lon/lat bitmask, so
+  the background map ships as a string instead of a mapping library.
+- `gentech.mjs` — bakes the stack icons into a module.
+
+### GitHub contributions
+
+Scraped from the public profile fragment, which needs no token — a PAT has no
+business in an internet-facing container. Two traps: that endpoint silently
+snaps `?from=` to the calendar year containing the date, and GitHub's own
+"last 12 months" is week-aligned (it starts on the Sunday on or before
+today-52w, so it spans 365-371 days, not 365).
 
 ### Roblox visits
 
@@ -25,20 +45,21 @@ resolve through their owning group and only fall back to the universe endpoint.
 
 ## Serving
 
-`server.mjs` is a static server with one extra job: it can be mounted under a
-path prefix (`BASE_PATHS=/eaksy`), so the same container answers on both the
-apex and a sub-path of another host without a `StripPrefix` middleware — and
-without the trailing-slash bug where `/eaksy` resolves `./style.css` against the
-parent and 404s every asset.
+Both servers can be mounted under a path prefix (`BASE_PATHS=/eaksy`), which is
+how the api lives at `apis.eaksy.com/eaksy/` with no `StripPrefix` middleware —
+and without the trailing-slash bug where `/eaksy` resolves `./style.css`
+against the parent and 404s every asset.
 
 ## Running it
 
-    node build/genmap.mjs
-    node build/gentech.mjs
-    node build/fetchdata.mjs   # needs the gh CLI, authenticated
-    PUBLIC_DIR=./src/ node server.mjs   # http://localhost:8080
+    node web/build/genmap.mjs
+    node web/build/gentech.mjs
 
-`./deploy.sh` does the same, then builds the image and updates the service.
+    BASE_PATHS=/eaksy CACHE_DIR=/tmp/eaksy node api/server.mjs   # :8080
+    PORT=8081 API_ORIGIN=http://127.0.0.1:8080/eaksy \
+      PUBLIC_DIR=./public/ node web/server.mjs                   # :8081
+
+`./deploy.sh` builds and pushes both images, then updates the stack.
 
 ## Licence
 

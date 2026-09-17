@@ -1,13 +1,12 @@
 version: '3.8'
 
 services:
-  site:
-    image: registry:5000/eaksy-site:${SITE_TAG:?set SITE_TAG}
+  # eaksy.com — static site. Never talks to an upstream; asks `api` instead.
+  web:
+    image: registry:5000/eaksy-web:${SITE_TAG:?set SITE_TAG}
     environment:
-      # apis.eaksy.com/eaksy/... — the server strips this prefix itself, so no
-      # StripPrefix middleware and no trailing-slash breakage
-      BASE_PATHS: /eaksy
-    networks: [infra-net]
+      API_ORIGIN: http://api:8080
+    networks: [infra-net, eaksy]
     deploy:
       replicas: 1
       restart_policy: { condition: any }
@@ -15,22 +14,39 @@ services:
       labels:
         traefik.enable: "true"
         traefik.swarm.network: infra-net
-        traefik.http.services.eaksy-site.loadbalancer.server.port: "8080"
-        traefik.http.services.eaksy-site.loadbalancer.healthcheck.path: "/healthz"
-        traefik.http.services.eaksy-site.loadbalancer.healthcheck.interval: "30s"
+        traefik.http.services.eaksy-web.loadbalancer.server.port: "8080"
+        traefik.http.services.eaksy-web.loadbalancer.healthcheck.path: "/healthz"
+        traefik.http.services.eaksy-web.loadbalancer.healthcheck.interval: "30s"
+        traefik.http.routers.eaksy-web.rule: "Host(`eaksy.com`) || Host(`www.eaksy.com`)"
+        traefik.http.routers.eaksy-web.entrypoints: websecure
+        traefik.http.routers.eaksy-web.tls: "true"
+        traefik.http.routers.eaksy-web.service: eaksy-web
 
-        # 1. the apex
-        traefik.http.routers.eaksy-site.rule: "Host(`eaksy.com`) || Host(`www.eaksy.com`)"
-        traefik.http.routers.eaksy-site.entrypoints: websecure
-        traefik.http.routers.eaksy-site.tls: "true"
-        traefik.http.routers.eaksy-site.service: eaksy-site
-
-        # 2. the same container under a path on the apis subdomain
-        traefik.http.routers.eaksy-site-apis.rule: "Host(`apis.eaksy.com`) && PathPrefix(`/eaksy`)"
-        traefik.http.routers.eaksy-site-apis.entrypoints: websecure
-        traefik.http.routers.eaksy-site-apis.tls: "true"
-        traefik.http.routers.eaksy-site-apis.service: eaksy-site
+  # apis.eaksy.com/eaksy/ — the only process that fetches github and roblox.
+  api:
+    image: registry:5000/eaksy-api:${SITE_TAG:?set SITE_TAG}
+    environment:
+      BASE_PATHS: /eaksy
+    networks: [infra-net, eaksy]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any }
+      update_config: { order: start-first, failure_action: rollback }
+      labels:
+        traefik.enable: "true"
+        traefik.swarm.network: infra-net
+        traefik.http.services.eaksy-api.loadbalancer.server.port: "8080"
+        traefik.http.services.eaksy-api.loadbalancer.healthcheck.path: "/healthz"
+        traefik.http.services.eaksy-api.loadbalancer.healthcheck.interval: "30s"
+        traefik.http.routers.eaksy-api.rule: "Host(`apis.eaksy.com`) && PathPrefix(`/eaksy`)"
+        traefik.http.routers.eaksy-api.entrypoints: websecure
+        traefik.http.routers.eaksy-api.tls: "true"
+        traefik.http.routers.eaksy-api.service: eaksy-api
 
 networks:
   infra-net:
     external: true
+  # private east-west link; web reaches api here, nothing else can
+  eaksy:
+    driver: overlay
+    attachable: false
