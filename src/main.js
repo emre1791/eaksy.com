@@ -96,12 +96,14 @@ const COLORS = [
   [226, 163, 86],
   [128, 206, 168],
   [206, 124, 124],
+  [176, 186, 198],
 ]
+const EDGE_K = 4
 const cv = document.getElementById('bg')
 const ctx = cv.getContext('2d', { alpha: false })
 const pointer = { x: -9e3, y: -9e3 }
 let dots = [], dpr = 1
-let hub = null, nodes = []
+let hub = null, nodes = [], edges = [], live = []
 
 function layout() {
   dpr = Math.min(devicePixelRatio || 1, 2)
@@ -124,6 +126,8 @@ function layout() {
   const m = data.map
   hub = m ? project(m.hub[0], m.hub[1]) : null
   nodes = (m?.points || []).map(([lat, lon, k]) => ({ p: project(lat, lon), k }))
+  edges = (m?.edges || []).map(([lat, lon]) => project(lat, lon))
+  live = []
 
   dots = []
   for (let y = 0; y < MAP_H; y++) {
@@ -169,31 +173,65 @@ const rgba = (k, a) => {
   return `rgba(${c[0]},${c[1]},${c[2]},${a})`
 }
 
+// bow the line off the straight chord so overlapping routes stay legible
+function bow([x1, y1], [x2, y2]) {
+  const len = Math.hypot(x2 - x1, y2 - y1) || 1
+  return [(x1 + x2) / 2 - ((y2 - y1) / len) * len * 0.16,
+          (y1 + y2) / 2 + ((x2 - x1) / len) * len * 0.16]
+}
+const at = (a, c, b, u) => (1 - u) * (1 - u) * a + 2 * (1 - u) * u * c + u * u * b
+
+const LIFE = 3400        // ms a transient link exists
+const SPAWN = 520        // ms between spawns
+let nextSpawn = 0
+
 function drawLinks(t) {
   if (!hub) return
-  const [x1, y1] = hub
 
+  /* transient origins: fade in, run a mote into the hub, fade out */
+  if (edges.length && t > nextSpawn) {
+    nextSpawn = t + SPAWN * (0.6 + Math.random())
+    if (live.length < 6) live.push({ p: edges[(Math.random() * edges.length) | 0], born: t })
+  }
+  live = live.filter(l => t - l.born < LIFE)
+
+  for (const l of live) {
+    const u = (t - l.born) / LIFE
+    // ramp up over the first fifth, hold, then fall away
+    const fade = Math.min(u / 0.2, 1) * (1 - Math.max(0, (u - 0.55) / 0.45)) ** 2
+    const [cx, cy] = bow(l.p, hub)
+
+    ctx.strokeStyle = rgba(EDGE_K, 0.13 * fade)
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(l.p[0], l.p[1])
+    ctx.quadraticCurveTo(cx, cy, hub[0], hub[1])
+    ctx.stroke()
+
+    const m = Math.min(1, u / 0.72)
+    ctx.fillStyle = rgba(EDGE_K, 0.6 * fade)
+    ctx.beginPath()
+    ctx.arc(at(l.p[0], cx, hub[0], m), at(l.p[1], cy, hub[1], m), 1.5, 0, 7)
+    ctx.fill()
+
+    ctx.fillStyle = rgba(EDGE_K, 0.75 * fade)
+    ctx.beginPath(); ctx.arc(l.p[0], l.p[1], 1.7, 0, 7); ctx.fill()
+  }
+
+  /* the permanent points */
   for (const n of nodes) {
-    const [x2, y2] = n.p
-    // bow the line off the straight chord so overlapping routes stay legible
-    const len = Math.hypot(x2 - x1, y2 - y1) || 1
-    const cx = (x1 + x2) / 2 - ((y2 - y1) / len) * len * 0.16
-    const cy = (y1 + y2) / 2 + ((x2 - x1) / len) * len * 0.16
-
+    const [cx, cy] = bow(hub, n.p)
     ctx.strokeStyle = rgba(n.k, 0.16)
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.moveTo(x1, y1)
-    ctx.quadraticCurveTo(cx, cy, x2, y2)
+    ctx.moveTo(hub[0], hub[1])
+    ctx.quadraticCurveTo(cx, cy, n.p[0], n.p[1])
     ctx.stroke()
 
-    // a mote running the curve, so the link reads as live rather than drawn
-    const u = ((t / 4200) + (x2 % 97) / 97) % 1
-    const v = 1 - u
+    const u = ((t / 4200) + (n.p[0] % 97) / 97) % 1
     ctx.fillStyle = rgba(n.k, 0.5 * Math.sin(u * Math.PI))
     ctx.beginPath()
-    ctx.arc(v * v * x1 + 2 * v * u * cx + u * u * x2,
-            v * v * y1 + 2 * v * u * cy + u * u * y2, 1.6, 0, 7)
+    ctx.arc(at(hub[0], cx, n.p[0], u), at(hub[1], cy, n.p[1], u), 1.6, 0, 7)
     ctx.fill()
   }
 
