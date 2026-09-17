@@ -1,6 +1,7 @@
 import { MAP, MAP_W, MAP_H } from './map.js'
 import { TECH } from './tech.js'
-import data from './data.json' with { type: 'json' }
+// injected by the server on every render; never fetched by the browser
+const data = JSON.parse(document.getElementById('data').textContent)
 
 /* ---------- clock ---------- */
 const clock = document.getElementById('clock')
@@ -69,15 +70,17 @@ const compact = n => n >= 1e9 ? (n / 1e9).toFixed(1) + 'b'
 const cap = (name, visits) =>
   `<figcaption><span class="n">${name}</span><span class="v">${compact(visits)} visits</span></figcaption>`
 
+// relative so it resolves under a path mount too; served from our own mirror
+const img = id => `<img src="./img/${id}.png" alt="" loading="lazy" decoding="async">`
+
 document.getElementById('games').innerHTML =
   data.featured.map(g => `
     <a href="${g.url}" target="_blank" rel="noopener">
-      <img src="${g.thumb}" alt="" loading="lazy" decoding="async">
+      ${img(g.id)}
       ${cap(g.name, g.visits)}
     </a>`).join('') +
   `<div class="more">
-     <div class="mosaic">${data.more.thumbs
-       .map(t => `<img src="${t}" alt="" loading="lazy" decoding="async">`).join('')}</div>
+     <div class="mosaic">${data.more.ids.map(img).join('')}</div>
      ${cap(`${data.more.count} more`, data.more.visits)}
    </div>`
 

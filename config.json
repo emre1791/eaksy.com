@@ -1,5 +1,8 @@
 {
-  "github": "emre1791",
+  "github": {
+    "user": "emre1791",
+    "since": 2017
+  },
   "roblox": {
     "featured": [
       {
