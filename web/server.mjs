@@ -3,6 +3,7 @@
 import { createServer } from 'http'
 import { readFile } from 'fs/promises'
 import { extname, join, normalize } from 'path'
+import { readdir } from 'fs/promises'
 import { createHash } from 'crypto'
 
 const ROOT = new URL(process.env.PUBLIC_DIR || './public/', import.meta.url).pathname
@@ -19,6 +20,17 @@ const TYPES = {
 }
 const NO_CACHE = process.env.NO_CACHE === '1'
 const files = new Map()
+
+/* Assets are served under /a/<build>/… and cached immutably. The id is a hash
+ * of their contents, so a deploy changes every URL and no browser can be left
+ * running last week's main.js against this week's markup. Relative imports
+ * inside a module resolve under the same prefix for free. */
+const BUILD = await (async () => {
+  const names = (await readdir(ROOT)).filter(n => n !== 'index.html').sort()
+  const h = createHash('sha1')
+  for (const n of names) h.update(n).update(await readFile(join(ROOT, n)))
+  return h.digest('hex').slice(0, 12)
+})()
 
 async function load(p) {
   if (!NO_CACHE && files.has(p)) return files.get(p)
@@ -74,6 +86,12 @@ createServer(async (req, res) => {
 
   if (path === '/healthz') return send(res, 200, 'text/plain', 'ok')
 
+  // /a/<build>/main.js — any build id resolves to the current file; stale HTML
+  // simply gets today's asset rather than a 404
+  let immutable = false
+  const versioned = path.match(/^\/a\/[0-9a-f]{6,}(\/.+)$/)
+  if (versioned) { path = versioned[1]; immutable = true }
+
   // Mirrored from the api so the browser never leaves this origin for an image.
   if (path.startsWith('/img/')) {
     const id = path.slice(5).replace(/\.png$/, '')
@@ -100,6 +118,7 @@ createServer(async (req, res) => {
       if (!d) return send(res, 503, 'text/plain', 'warming up', { 'retry-after': '5' })
       const html = body.toString()
         .replace('__DATA__', () => JSON.stringify(d).replace(/</g, '\\u003c'))
+        .replace(/"\.\/(main\.js|style\.css)"/g, `"./a/${BUILD}/$1"`)
       return send(res, 200, TYPES['.html'], html,
         { 'cache-control': 'public, max-age=60, must-revalidate' })
     }
@@ -108,8 +127,10 @@ createServer(async (req, res) => {
     const ext = extname(path)
     send(res, 200, TYPES[ext] || 'application/octet-stream',
       req.method === 'HEAD' ? undefined : body,
-      { etag, 'cache-control': NO_CACHE ? 'no-store' : 'public, max-age=3600' })
+      { etag, 'cache-control': NO_CACHE ? 'no-store'
+        : immutable ? 'public, max-age=31536000, immutable'
+        : 'no-cache' })
   } catch {
     send(res, 404, 'text/plain', 'not found')
   }
-}).listen(PORT, '0.0.0.0', () => console.log(`web on :${PORT} api=${API} bases=[${BASES}]`))
+}).listen(PORT, '0.0.0.0', () => console.log(`web on :${PORT} api=${API} build=${BUILD} bases=[${BASES}]`))
