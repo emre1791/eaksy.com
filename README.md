@@ -39,3 +39,8 @@ parent and 404s every asset.
     PUBLIC_DIR=./src/ node server.mjs   # http://localhost:8080
 
 `./deploy.sh` does the same, then builds the image and updates the service.
+
+## Licence
+
+Code is MIT (`LICENSE`). Personal content, and the brand marks the stack row
+uses for identification, are not — see `NOTICE`.

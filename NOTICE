@@ -1,0 +1,24 @@
+The MIT licence in LICENSE covers the code in this repository.
+
+It does not cover:
+
+  Personal content — my name, the writing on the page, and the numbers the
+  build step fetches. Reuse the code, not the identity.
+
+  Roblox game thumbnails — fetched from Roblox at build time and never stored
+  here. They belong to their respective creators and to Roblox Corporation.
+
+Third-party assets included in this repository:
+
+  build/node_modules/simple-icons — brand icons, CC0-1.0.
+    https://github.com/simple-icons/simple-icons
+    The icons are CC0; the brands they depict are trademarks of their owners
+    and are used here only to identify the tools in question.
+
+  build/balena.svg — the balena mark, taken from balena's own logo SVG and
+    flattened to a single colour because simple-icons has no balena entry.
+    balena is a trademark of Balena Ltd, used here for identification only.
+
+  src/map.js — generated from Natural Earth land polygons via the world-atlas
+    package. Natural Earth is public domain.
+    https://www.naturalearthdata.com/about/terms-of-use/
