@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Emre Aksoy</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<main>
+  <header>
+    <span class="mono dim">istanbul</span>
+    <span class="mono dim" id="clock">--:--:--</span>
+  </header>
+
+  <h1>Emre&nbsp;Aksoy</h1>
+  <p class="lead">I build games, and everything behind them.</p>
+  <p class="sub mono dim">Lately an ERP running a retail business — invoices, orders,
+  and a fleet of Raspberry Pis. Before that, a few years at
+  companies building games and processing data.</p>
+
+  <section class="contrib">
+    <div id="graph" role="img" aria-label="commit activity"></div>
+    <p class="mono dim caption">
+      <span id="ctotal"></span> commits in
+      <span class="sel"><select id="year" aria-label="year"></select></span>
+      <span class="tip" id="tip"></span>
+    </p>
+  </section>
+
+  <h2 class="mono dim rule">games shipped</h2>
+  <section class="games" id="games"></section>
+  <p class="mono dim caption" id="visits"></p>
+
+  <h2 class="mono dim rule">stack</h2>
+  <section class="tech" id="tech"></section>
+
+  <h2 class="mono dim rule">elsewhere</h2>
+  <nav class="links mono">
+    <a href="https://github.com/emre1791">github</a>
+    <a href="https://www.roblox.com/users/88426605/profile">roblox</a>
+    <a href="https://x.com/codelead_">twitter</a>
+    <a href="#">email</a>
+  </nav>
+
+  <footer class="mono dim"><span id="built"></span></footer>
+</main>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>

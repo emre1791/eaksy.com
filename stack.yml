@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  site:
+    image: registry:5000/eaksy-site:${SITE_TAG:?set SITE_TAG}
+    environment:
+      # apis.eaksy.com/eaksy/... — the server strips this prefix itself, so no
+      # StripPrefix middleware and no trailing-slash breakage
+      BASE_PATHS: /eaksy
+    networks: [infra-net]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any }
+      update_config: { order: start-first, failure_action: rollback }
+      labels:
+        traefik.enable: "true"
+        traefik.swarm.network: infra-net
+        traefik.http.services.eaksy-site.loadbalancer.server.port: "8080"
+        traefik.http.services.eaksy-site.loadbalancer.healthcheck.path: "/healthz"
+        traefik.http.services.eaksy-site.loadbalancer.healthcheck.interval: "30s"
+
+        # 1. the apex
+        traefik.http.routers.eaksy-site.rule: "Host(`eaksy.com`) || Host(`www.eaksy.com`)"
+        traefik.http.routers.eaksy-site.entrypoints: websecure
+        traefik.http.routers.eaksy-site.tls: "true"
+        traefik.http.routers.eaksy-site.service: eaksy-site
+
+        # 2. the same container under a path on the apis subdomain
+        traefik.http.routers.eaksy-site-apis.rule: "Host(`apis.eaksy.com`) && PathPrefix(`/eaksy`)"
+        traefik.http.routers.eaksy-site-apis.entrypoints: websecure
+        traefik.http.routers.eaksy-site-apis.tls: "true"
+        traefik.http.routers.eaksy-site-apis.service: eaksy-site
+
+networks:
+  infra-net:
+    external: true

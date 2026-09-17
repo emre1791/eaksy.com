@@ -1,0 +1,172 @@
+:root{
+  --bg:#0b0b0c;
+  --fg:#e9e6e0;
+  --dim:#6d6a64;
+  --line:#1d1d1f;
+  --serif: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --mono: ui-monospace,"SF Mono",Menlo,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:var(--serif);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+main{
+  position:relative;z-index:1;
+  max-width:880px;margin:0 auto;
+  padding:clamp(28px,6vh,64px) clamp(22px,5vw,40px) 80px;
+}
+.mono{font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;text-transform:lowercase}
+.dim{color:var(--dim)}
+
+header{display:flex;justify-content:space-between;align-items:baseline}
+
+h1{
+  font-weight:400;
+  font-size:clamp(46px,11vw,104px);
+  letter-spacing:-.035em;
+  line-height:.94;
+  margin:clamp(64px,20vh,170px) 0 0;
+}
+
+.lead{
+  font-size:clamp(19px,2.3vw,25px);
+  letter-spacing:-.015em;line-height:1.35;
+  margin-top:clamp(20px,3vh,28px);max-width:19em;
+  text-wrap:balance;
+}
+/* the only prose on the page, set small and quiet so it stays skippable */
+.sub{
+  text-transform:none;font-size:12px;line-height:1.75;
+  margin-top:16px;max-width:44em;text-wrap:pretty;
+}
+.contrib{margin-top:clamp(52px,11vh,96px)}
+
+/* ---- contributions ---- */
+.contrib{margin-bottom:clamp(44px,8vh,72px)}
+#graph{
+  --gap:3px;
+  display:grid;
+  grid-auto-flow:column;
+  grid-template-rows:repeat(7,auto);
+  /* pin the column to the 53-week width so a part-year renders at the same
+     cell size and simply stops early, instead of stretching to fill */
+  grid-auto-columns:calc((100% - 52 * var(--gap)) / 53);
+  justify-content:start;
+  gap:var(--gap);
+  width:100%;
+  max-width:600px;
+}
+#graph i{
+  display:block;aspect-ratio:1;border-radius:1.5px;
+  background:rgba(233,230,224,var(--a,.045));
+  transition:background .12s;
+}
+#graph i:hover{background:var(--fg)}
+.caption{margin-top:16px;display:flex;gap:6px;align-items:baseline}
+
+/* year picker: a native select with every chrome affordance stripped, so it
+   reads as part of the sentence until you click it */
+.sel{position:relative;display:inline-flex;align-items:baseline}
+.sel::after{
+  content:"";position:absolute;right:2px;top:.42em;
+  border:3px solid transparent;border-top-color:var(--dim);
+  pointer-events:none;transition:border-top-color .15s;
+}
+.sel:hover::after{border-top-color:var(--fg)}
+#year{
+  -webkit-appearance:none;appearance:none;
+  font:inherit;letter-spacing:inherit;
+  background:none;border:0;outline:0;padding:0 14px 0 0;margin:0;
+  color:var(--dim);cursor:pointer;transition:color .15s;
+}
+#year:hover,#year:focus-visible{color:var(--fg)}
+#year option{background:#141416;color:var(--fg)}
+.tip{margin-left:auto;color:var(--fg);opacity:0;transition:opacity .12s}
+#graph i.pad{visibility:hidden}
+.tip.on{opacity:1}
+
+/* section labels: set in the same mono as the data lines, with a hairline
+   running to the edge so they read as rules rather than headings */
+.rule{
+  display:flex;align-items:center;gap:14px;
+  font-weight:400;margin-bottom:16px;
+}
+.rule::after{content:"";flex:1;height:1px;background:var(--line)}
+h2.rule{margin-top:clamp(56px,10vh,92px)}
+.contrib + .rule{margin-top:0}
+
+/* ---- games ---- */
+.games{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.games a,.games .more{
+  position:relative;display:block;overflow:hidden;
+  border-radius:3px;background:var(--line);
+  aspect-ratio:16/9;text-decoration:none;
+}
+.games img{
+  width:100%;height:100%;object-fit:cover;display:block;
+  filter:grayscale(1) contrast(.9) brightness(.62);
+  transition:filter .45s cubic-bezier(.2,.7,.3,1), transform .45s cubic-bezier(.2,.7,.3,1);
+}
+.games a:hover img{filter:none;transform:scale(1.03)}
+
+/* the unclickable "many more" tile: a 2x2 of the remaining games, pushed
+   further back so it reads as a footnote rather than a fourth headline */
+.games .more{cursor:default}
+.games .more .mosaic{
+  position:absolute;inset:0;display:grid;
+  grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;
+}
+.games .more .mosaic img{filter:grayscale(1) brightness(.34) contrast(.85)}
+.games .more figcaption{background:linear-gradient(rgba(8,8,9,.34),rgba(8,8,9,.9))}
+.games .more .n{color:#b9b5ac}
+.games figcaption{
+  position:absolute;left:0;right:0;bottom:0;
+  padding:26px 14px 11px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  background:linear-gradient(transparent,rgba(8,8,9,.88));
+  color:var(--fg);
+}
+.games .n{font-family:var(--serif);font-size:15px;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.games .v{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;
+  color:#a8a49c;flex:none}
+
+/* ---- tech ---- */
+/* icon + name together: the marks alone were a guessing game */
+.tech{
+  display:flex;flex-wrap:wrap;gap:9px 8px;
+  max-width:760px;
+}
+.tech span{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 10px 5px 8px;
+  border:1px solid var(--line);border-radius:999px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.03em;
+  color:#8e8a83;
+  transition:color .15s,border-color .15s;
+}
+.tech span:hover{color:var(--fg);border-color:#33322f}
+.tech svg{width:14px;height:14px;flex:none;fill:currentColor;display:block}
+.tech span.bare{padding-left:12px}
+
+/* ---- links ---- */
+.links{display:flex;gap:22px;margin:0;flex-wrap:wrap}
+.links a{
+  color:var(--dim);text-decoration:none;
+  border-bottom:1px solid transparent;padding-bottom:2px;
+  transition:color .15s,border-color .15s;
+}
+.links a:hover{color:var(--fg);border-color:var(--fg)}
+
+footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line)}
+
+@media (max-width:620px){
+  .games{grid-template-columns:1fr}
+  #graph{--gap:2px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
